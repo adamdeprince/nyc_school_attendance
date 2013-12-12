@@ -1,0 +1,25 @@
+#!/usr/bin/python
+
+from csv import DictWriter 
+import datetime
+import gzip
+import sys
+import urllib2
+import xml.etree.ElementTree as ET
+
+fields = "DBN ATTN_DATE_YMD ATTN_PCT LOC_CODE SCHOOL_NAME Borough DistrictCode".split()
+
+now = datetime.datetime.now()
+
+def stream_attendance(data):
+    root = ET.fromstring(data)
+    for child in root:
+        d = {}
+        for field in child:
+            d[field.tag] = field.text
+        yield d
+
+if __name__ == "__main__":
+    data = urllib2.urlopen("http://schools.nyc.gov/aboutus/data/attendancexml").read()
+    gzip.open(now.strftime("data/xml/nyc-school-attendance-%Y-%m-%d.xml.gz"), "w").write(data)
+    DictWriter(gzip.open(now.strftime("data/csv/nyc-school-attendance-%Y-%m-%d.csv.gz"), "w"), fields).writerows(stream_attendance(data))
