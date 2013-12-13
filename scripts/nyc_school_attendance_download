@@ -3,9 +3,11 @@
 from csv import DictWriter 
 import datetime
 import gzip
+from StringIO import StringIO
 import sys
 import urllib2
 import xml.etree.ElementTree as ET
+import zopfli.gzip
 
 fields = "DBN ATTN_DATE_YMD ATTN_PCT LOC_CODE SCHOOL_NAME Borough DistrictCode".split()
 
@@ -21,5 +23,8 @@ def stream_attendance(data):
 
 if __name__ == "__main__":
     data = urllib2.urlopen("http://schools.nyc.gov/aboutus/data/attendancexml").read()
-    gzip.open(now.strftime("data/xml/nyc-school-attendance-%Y-%m-%d.xml.gz"), "w").write(data)
-    DictWriter(gzip.open(now.strftime("data/csv/nyc-school-attendance-%Y-%m-%d.csv.gz"), "w"), fields).writerows(stream_attendance(data))
+    open(now.strftime("data/xml/nyc-school-attendance-%Y-%m-%d.xml.gz"), "w").write(zopfli.gzip.compress(data, 0, 100))
+    as_a_csv = StringIO()
+    DictWriter(as_a_csv, fields).writerows(stream_attendance(data))
+    open(now.strftime("data/csv/nyc-school-attendance-%Y-%m-%d.csv.gz"), "w").write(zopfli.gzip.compress(data, 0, 100))
+
