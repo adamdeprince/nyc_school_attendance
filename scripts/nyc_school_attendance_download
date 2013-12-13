@@ -22,9 +22,16 @@ def stream_attendance(data):
 
 
 if __name__ == "__main__":
-    data = urllib2.urlopen("http://schools.nyc.gov/aboutus/data/attendancexml").read()
-    open(now.strftime("data/xml/nyc-school-attendance-%Y-%m-%d.xml.gz"), "w").write(zopfli.gzip.compress(data, 0, 100))
+    if len(sys.argv) > 1:
+        fn_xml = sys.argv[1]
+        fn_csv = sys.argv[2]
+        data = gzip.open(fn_xml).read()
+    else:
+        data = urllib2.urlopen("http://schools.nyc.gov/aboutus/data/attendancexml").read()
+        fn_xml = now.strftime("data/xml/nyc-school-attendance-%Y-%m-%d.xml.gz")
+        fn_csv = now.strftime("data/csv/nyc-school-attendance-%Y-%m-%d.csv.gz")
+        open(fn_xml, "w").write(zopfli.gzip.compress(data, 0, 100))
     as_a_csv = StringIO()
     DictWriter(as_a_csv, fields).writerows(stream_attendance(data))
-    open(now.strftime("data/csv/nyc-school-attendance-%Y-%m-%d.csv.gz"), "w").write(zopfli.gzip.compress(data, 0, 100))
+    open(fn_csv, "w").write(zopfli.gzip.compress(data, 0, 100))
 
