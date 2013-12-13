@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 from csv import DictWriter 
 import datetime
 import gzip
@@ -20,6 +19,7 @@ def stream_attendance(data):
         for field in child:
             d[field.tag] = field.text
         yield d
+
 
 if __name__ == "__main__":
     data = urllib2.urlopen("http://schools.nyc.gov/aboutus/data/attendancexml").read()

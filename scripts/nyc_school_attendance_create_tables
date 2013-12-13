@@ -1,0 +1,73 @@
+#!/usr/bin/python
+
+import psycopg2
+import datetime 
+import sys
+from csv import DictReader 
+conn = psycopg2.connect("host=127.0.0.1 dbname=" + sys.argv[1])
+cursor = conn.cursor()
+
+try:
+    cursor.execute("""create table nyc_school_attendance(
+    DBN char(6),
+    ATTN_DATE date,
+    ATTN_PCT float,
+    LOC_CODE char(4),
+    SCHOOL_NAME varchar(255),
+    Borough char(1),
+    DistrictCode char(2));commit;""")
+except Exception, e:
+    print  e
+
+conn = psycopg2.connect("host=127.0.0.1 dbname=" + sys.argv[1])
+cursor = conn.cursor()
+try:
+    cursor.execute("""create table nyc_school_attendance_totals(
+    ATTN_DATE date,
+    ATTN_PCT float);commit""")
+except Exception, e:
+    print  e
+
+conn = psycopg2.connect("host=127.0.0.1 dbname=" + sys.argv[1])
+cursor = conn.cursor()
+cursor.execute("select DBN, ATTN_DATE from nyc_school_attendance;")
+visited = set()
+
+for dbn, attn_date in cursor.fetchall():
+    attn_date = attn_date.strftime('%04d%02d%02d' % (attn_date.year, attn_date.month, attn_date.day))
+    visited.add((dbn, attn_date))
+
+fields = "DBN ATTN_DATE_YMD ATTN_PCT LOC_CODE SCHOOL_NAME Borough DistrictCode".split()
+
+cursor.execute("select ATTN_DATE from nyc_school_attendance_totals")
+for (attn_date,) in cursor.fetchall():
+    attn_date = attn_date.strftime('%04d%02d%02d' % (attn_date.year, attn_date.month, attn_date.day))
+    visited.add(attn_date)
+
+def parse_date(d):
+    return datetime.date(*map(int, ("%s%s%s%s/%s%s/%s%s" % tuple(d)).split('/')))
+
+
+
+def parse(reader):
+    for row in reader:
+        if row['DBN'] == 'TOTAL' and row['ATTN_DATE_YMD'] in visited:
+            continue 
+        if (row['DBN'], row['ATTN_DATE_YMD']) in visited:
+            continue 
+        row['ATTN_DATE_YMD'] = parse_date(row['ATTN_DATE_YMD'])
+        if row['ATTN_PCT'] == 'NS':
+            row['ATTN_PCT'] = None
+        else:
+            row['ATTN_PCT'] = float(row['ATTN_PCT'])
+        if row['DBN'] != 'TOTAL':
+            yield row
+        else:
+            conn = psycopg2.connect("host=127.0.0.1 dbname=" + sys.argv[1])
+            cursor = conn.cursor()
+            cursor.execute('insert into nyc_school_attendance_totals (ATTN_DATE, ATTN_PCT) values (%(ATTN_DATE_YMD)s, %(ATTN_PCT)s)', row)
+            cursor.execute('commit;')
+
+cursor = conn.cursor()
+cursor.executemany('insert into nyc_school_attendance (DBN, ATTN_DATE, ATTN_PCT, LOC_CODE, SCHOOL_NAME, Borough, DistrictCode) values (%(DBN)s, %(ATTN_DATE_YMD)s, %(ATTN_PCT)s, %(LOC_CODE)s, %(SCHOOL_NAME)s, %(Borough)s, %(DistrictCode)s)', parse(DictReader(sys.stdin, fields)))
+cursor.execute('commit')

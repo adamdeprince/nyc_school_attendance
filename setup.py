@@ -24,7 +24,10 @@ setup(
     license='MIT',
     include_package_data=False,
     classifiers=[],
-    scripts=['scripts/nyc_school_attendance_download'],
+    scripts=[
+        'scripts/nyc_school_attendance_download',
+        'scripts/nyc_school_attendance_create_tables'
+         ],
     install_requires=[
         'zopfli'
         ]
